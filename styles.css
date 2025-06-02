@@ -1,0 +1,258 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    min-height: 100vh;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    transition: background 0.3s ease;
+}
+
+.theme-light {
+    background: #f5f5f7;
+}
+
+.theme-dark {
+    background: #1c1c1e;
+}
+
+.calculator {
+    width: 100%;
+    max-width: 320px;
+    background: #2c2c2e;
+    border-radius: 20px;
+    padding: 0;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    overflow: hidden;
+}
+
+.theme-light .calculator {
+    background: #ffffff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+}
+
+.header {
+    padding: 15px 20px 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #2c2c2e;
+}
+
+.theme-light .header {
+    background: #ffffff;
+}
+
+.theme-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #48484a;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 12px;
+    color: #ffffff;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.theme-light .theme-toggle {
+    background: #f2f2f7;
+    color: #1c1c1e;
+}
+
+.toggle-circle {
+    width: 16px;
+    height: 16px;
+    background: #ff9500;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.theme-light .toggle-circle {
+    background: #007aff;
+}
+
+.refresh-btn {
+    background: none;
+    border: none;
+    color: #ff9500;
+    font-size: 18px;
+    cursor: pointer;
+    opacity: 0.8;
+    transition: all 0.2s ease;
+    padding: 5px;
+    border-radius: 8px;
+}
+
+.theme-light .refresh-btn {
+    color: #007aff;
+}
+
+.refresh-btn:hover {
+    opacity: 1;
+    background: rgba(255, 149, 0, 0.1);
+}
+
+.theme-light .refresh-btn:hover {
+    background: rgba(0, 122, 255, 0.1);
+}
+
+.refresh-btn:active {
+    transform: scale(0.95);
+}
+
+.display {
+    background: #2c2c2e;
+    padding: 20px;
+    text-align: right;
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.theme-light .display {
+    background: #ffffff;
+}
+
+.calculation {
+    color: #8e8e93;
+    font-size: 16px;
+    margin-bottom: 10px;
+    min-height: 20px;
+}
+
+.theme-light .calculation {
+    color: #8e8e93;
+}
+
+.display-text {
+    color: #ffffff;
+    font-size: 3rem;
+    font-weight: 300;
+    line-height: 1;
+    transition: font-size 0.2s ease;
+}
+
+.theme-light .display-text {
+    color: #1c1c1e;
+}
+
+.buttons {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: #48484a;
+}
+
+.theme-light .buttons {
+    background: #d1d1d6;
+}
+
+.btn {
+    background: #636366;
+    border: none;
+    padding: 0;
+    font-size: 1.5rem;
+    font-weight: 400;
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.1s ease;
+    min-height: 65px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.theme-light .btn {
+    background: #f2f2f7;
+    color: #1c1c1e;
+}
+
+.btn:active {
+    opacity: 0.7;
+}
+
+.btn-function {
+    background: #a6a6a6;
+    color: #1c1c1e;
+    font-weight: 500;
+}
+
+.theme-light .btn-function {
+    background: #d1d1d6;
+    color: #1c1c1e;
+}
+
+.btn-operator {
+    background: #ff9500;
+    color: #ffffff;
+    font-weight: 500;
+}
+
+.btn-operator.active {
+    background: #ffffff;
+    color: #ff9500;
+}
+
+.theme-light .btn-operator {
+    background: #007aff;
+}
+
+.theme-light .btn-operator.active {
+    background: #ffffff;
+    color: #007aff;
+}
+
+.btn-zero {
+    grid-column: span 2;
+}
+
+.error {
+    color: #ff453a !important;
+    animation: shake 0.4s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-3px); }
+    75% { transform: translateX(3px); }
+}
+
+@media (max-width: 768px) {
+    .calculator {
+        max-width: 300px;
+    }
+    
+    .display-text {
+        font-size: 2.5rem;
+    }
+    
+    .btn {
+        min-height: 60px;
+        font-size: 1.4rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .calculator {
+        max-width: 280px;
+    }
+
+    .display-text {
+        font-size: 2.2rem;
+    }
+    
+    .btn {
+        min-height: 55px;
+        font-size: 1.3rem;
+    }
+}
