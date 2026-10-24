@@ -1,10 +1,16 @@
-# Basic Calculator Web App
+﻿# Basic Calculator Web App
 
 An iOS-style calculator that chains operations, supports the keyboard, and ships with a dark / light theme switch.
 
 **Live demo:** https://mister2314.github.io/Basic-Calculator-Web-App/
 
-<img src="docs/preview.png" alt="Calculator screenshot" width="380">
+<div align="center">
+
+| Desktop | Mobile |
+|---|---|
+| <img src="docs/shot-desktop.png" alt="Desktop view" width="700"> | <img src="docs/shot-mobile.png" alt="Mobile view" width="290"> |
+
+</div>
 
 ## What it does
 
