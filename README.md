@@ -1,134 +1,36 @@
-<h1 align="center">Calculator</h1>
+# Basic Calculator Web App
 
-<p align="center"><b>An iOS-inspired calculator with chained operations, keyboard support and a built-in light / dark theme switch.</b></p>
+An iOS-style calculator that chains operations, supports the keyboard, and ships with a dark / light theme switch.
 
-<p align="center">
-<a href="https://mister2314.github.io/Basic-Calculator-Web-App/"><img src="https://img.shields.io/badge/Live_Demo-2ea44f?style=flat-square&logo=vercel&logoColor=white" alt="Live demo" height="28"></a>
-<img src="https://img.shields.io/badge/HTML5-e34f26?style=flat-square" alt="HTML5" height="20">
-<img src="https://img.shields.io/badge/CSS3-1572b6?style=flat-square" alt="CSS3" height="20">
-<img src="https://img.shields.io/badge/Vanilla_JS-f7df1e?style=flat-square" alt="Vanilla JS" height="20">
-</p>
+**Live demo:** https://mister2314.github.io/Basic-Calculator-Web-App/
 
-<p align="center"><a href="https://mister2314.github.io/Basic-Calculator-Web-App/"><b>Live demo</b></a> &nbsp;·&nbsp; <a href="#quick-start">Quick start</a> &nbsp;·&nbsp; <a href="#features">Features</a> &nbsp;·&nbsp; <a href="#architecture">Architecture</a> &nbsp;·&nbsp; <a href="#faq">FAQ</a></p>
+<img src="docs/preview.png" alt="Calculator screenshot" width="380">
 
-<p align="center">
-  <a href="https://mister2314.github.io/Basic-Calculator-Web-App/">
-    <img src="docs/demo.gif" alt="Calculator — animated demo" width="88%">
-  </a>
-</p>
+## What it does
 
-<p align="center"><sub>Live capture of the real build — 37 KB, loops forever.</sub></p>
+Arithmetic runs without `eval`: input is tracked as separate `currentInput`, `previousInput` and `operator` values, so chained operations, repeated equals and decimals behave predictably. The 267-line `script.js` also handles thousand-separator formatting and switches to exponential notation past 10 digits.
 
-## Overview
+## Tech stack
 
-A calculator that behaves the way a calculator should: it keeps a running result, so you can chain `2 + 3 × 4` without pressing equals in between, and it shows you both the expression and the current value.
-
-The arithmetic is deliberately not `eval`. Input is tracked as separate `currentInput`, `previousInput` and `operator` values, which makes decimal handling, sign flipping and repeated-equals behaviour explicit rather than accidental.
-
-The whole thing is themed with CSS custom properties and ships with a dark and a light palette, switchable from the header.
-
-## At a glance
-
-| Field | Detail |
-| --- | --- |
-| **Type** | Static site — no build step |
-| **Primary language** | JavaScript |
-| **Live demo** | [mister2314.github.io/Basic-Calculator-Web-App](https://mister2314.github.io/Basic-Calculator-Web-App/) |
-| **Repository** | [Mister2314/Basic-Calculator-Web-App](https://github.com/Mister2314/Basic-Calculator-Web-App) |
+HTML · CSS · Vanilla JS
 
 ## Features
 
-- Four operations with chained calculation — the running result feeds the next step
-- Repeats the last operation when equals is pressed again
-- Decimal handling, sign toggle (±) and percentage
-- Live expression line above the current value
-- Thousand-separator number formatting
-- Full keyboard support
-- Dark / light theme toggle
-- No dependencies — plain HTML, CSS and JavaScript
+- Chained calculation — the running result feeds the next operation
+- Repeated equals repeats the last operation, like a physical calculator
+- Full keyboard support (digits, operators, Enter, Backspace, Escape) via a `keydown` handler
+- Display font scales down automatically as the number grows
+- Dark / light theme built on CSS custom properties
 
-## Tech Stack
-
-| Layer | Technology |
-| --- | --- |
-| Markup | HTML5 |
-| Styling | CSS3, custom-property themes |
-| Logic | Vanilla JavaScript |
-| Deploy | GitHub Pages |
-
-## Architecture
-
-```mermaid
-flowchart LR
-  A["Key press"] --> B["Input state<br/>current · previous · operator"]
-  B --> C["Arithmetic"]
-  C --> D["Number formatting<br/>thousand separators"]
-  D --> E["Display + expression line"]
-```
-
-## Screenshots
-
-| Desktop | Mobile |
-| :---: | :---: |
-| <img src="docs/preview.png" alt="Desktop view"> | <img src="docs/preview-mobile.png" alt="Mobile view" width="230"> |
-
-## Quick Start
+## Run locally
 
 ```bash
 git clone https://github.com/Mister2314/Basic-Calculator-Web-App.git
 cd Basic-Calculator-Web-App
-
-# open it directly
-start index.html      # Windows
-open  index.html      # macOS
-
-# or serve the folder
 npx serve .
+# or just open index.html
 ```
 
-## Project Structure
+## What I learned
 
-```
-index.html — keypad, display and theme switch
-script.js — input state machine, arithmetic, formatting, theme toggle
-styles.css — keypad grid and both colour palettes
-```
-
-## FAQ
-
-<details>
-<summary><b>Why not just use `eval()`?</b></summary>
-
-`eval` gets decimals and chained operations subtly wrong, and it executes whatever string it is handed. Tracking `currentInput`, `previousInput` and `operator` explicitly makes the behaviour predictable.
-
-</details>
-
-<details>
-<summary><b>What does pressing equals twice do?</b></summary>
-
-It repeats the last operation, which is what people expect from a physical calculator.
-
-</details>
-
-<details>
-<summary><b>Is there keyboard support?</b></summary>
-
-Yes — digits, operators, Enter, Backspace and Escape are all wired up.
-
-</details>
-
-## Roadmap
-
-- [ ] Add a calculation history panel
-- [ ] Add parentheses support
-- [ ] Persist the theme and last result across reloads
-
-## Notes
-
-Writing the arithmetic by hand was more work than `eval` would have been, and worth it — it is the difference between a calculator that handles `0.1 + 0.2` predictably and one that does not.
-
-## Author
-
-**Xəyal Hüseynli** — Junior Front-End Developer
-
-[Portfolio](https://hypnosdev.vercel.app) · [GitHub](https://github.com/Mister2314) · [LinkedIn](https://www.linkedin.com/in/x%C9%99yal-h%C3%BCseynli-3487b91ba/) · [xeyalhuseynli06@gmail.com](mailto:xeyalhuseynli06@gmail.com)
+Writing the arithmetic by hand instead of calling `eval` was what made decimals and repeated-equals behaviour explicit rather than accidental.
