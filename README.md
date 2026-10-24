@@ -1,8 +1,8 @@
-﻿# Basic Calculator Web App
+# Basic Calculator Web App
 
 An iOS-style calculator that chains operations, supports the keyboard, and ships with a dark / light theme switch.
 
-**Live demo:** https://mister2314.github.io/Basic-Calculator-Web-App/
+**Live demo:** https://basic-calculator-web-app.vercel.app
 
 <div align="center">
 
@@ -18,7 +18,7 @@ Arithmetic runs without `eval`: input is tracked as separate `currentInput`, `pr
 
 ## Tech stack
 
-HTML · CSS · Vanilla JS
+React 19 · TypeScript · Vite
 
 ## Features
 

@@ -1,53 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>iOS Style Calculator</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body class="theme-dark">
-    <div class="calculator">
-        <div class="header">
-            <button class="theme-toggle" onclick="toggleTheme()">
-                <div class="toggle-circle"></div>
-                <span id="theme-text">Switch to Light</span>
-            </button>
-            <button class="refresh-btn" onclick="refreshCalculator()" title="Reset Calculator">⟲</button>
-        </div>
-        
-        <div class="display">
-            <div class="calculation" id="calculation"></div>
-            <div class="display-text" id="display">0</div>
-        </div>
-        
-        <div class="buttons">
-            <button class="btn btn-function" onclick="clearDisplay()">C</button>
-            <button class="btn btn-function" onclick="toggleSign()">+/−</button>
-            <button class="btn btn-function" onclick="inputOperator('%')" data-key="%">%</button>
-            <button class="btn btn-operator" onclick="inputOperator('/')" data-key="/">÷</button>
-            
-            <button class="btn" onclick="inputNumber('7')" data-key="7">7</button>
-            <button class="btn" onclick="inputNumber('8')" data-key="8">8</button>
-            <button class="btn" onclick="inputNumber('9')" data-key="9">9</button>
-            <button class="btn btn-operator" onclick="inputOperator('*')" data-key="*">×</button>
-            
-            <button class="btn" onclick="inputNumber('4')" data-key="4">4</button>
-            <button class="btn" onclick="inputNumber('5')" data-key="5">5</button>
-            <button class="btn" onclick="inputNumber('6')" data-key="6">6</button>
-            <button class="btn btn-operator" onclick="inputOperator('-')" data-key="-">−</button>
-            
-            <button class="btn" onclick="inputNumber('1')" data-key="1">1</button>
-            <button class="btn" onclick="inputNumber('2')" data-key="2">2</button>
-            <button class="btn" onclick="inputNumber('3')" data-key="3">3</button>
-            <button class="btn btn-operator" onclick="inputOperator('+')" data-key="+">+</button>
-            
-            <button class="btn btn-zero" onclick="inputNumber('0')" data-key="0">0</button>
-            <button class="btn" onclick="inputNumber('.')" data-key=".">.</button>
-            <button class="btn btn-operator" onclick="calculate()" data-key="Enter">=</button>
-        </div>
-    </div>
-
-    <script src="script.js"></script>
-</body>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>
