@@ -39,6 +39,19 @@ React 19 · TypeScript · Vite
 - Display font scales down automatically as the number grows
 - Dark / light theme built on CSS custom properties
 
+### Revamp (2026-10)
+
+The calculator is treated as a physical object — same state machine, deeper feel:
+
+- **Key press choreography** — keys press in fast (90 ms) and spring back with a slight overshoot; a typed key visually depresses the matching on-screen button
+- **Display transitions** — every digit entry and result lands with a short settle animation; a divide-by-zero shakes the display before the 2-second auto-reset
+- **History strip** — the last three operations appear as a quiet ledger above the calculation line (display only; it never touches the calculation logic)
+- **Theme toggle micro-interaction** — the toggle dot rotates and scales as the palette crossfades
+- **Mobile-perfect** — `dvh`-based layout, safe-area insets, and a 64 px thumb grid
+- **Accessibility** — `aria-live` announcements on the display, labelled buttons, visible focus rings, and full `prefers-reduced-motion` fallbacks
+
+All motion is CSS-only (`transform`/`opacity`, ≤400 ms) — zero new JavaScript dependencies.
+
 ## Run locally
 
 ```bash

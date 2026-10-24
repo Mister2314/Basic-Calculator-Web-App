@@ -98,13 +98,18 @@ export default function App() {
   const [state, setState] = useState<CalcState>(initialState);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [flashKey, setFlashKey] = useState<string | null>(null);
+  const [history, setHistory] = useState<string[]>([]);
   const refreshBtnRef = useRef<HTMLButtonElement>(null);
+
+  const pushHistory = (entry: string) =>
+    setHistory((h) => [entry, ...h].slice(0, 3));
 
   const stateRef = useRef(state);
   stateRef.current = state;
 
   const clearDisplay = () => {
     setState({ ...initialState });
+    setHistory([]);
   };
 
   const showError = () => {
@@ -122,6 +127,7 @@ export default function App() {
       showError();
       return;
     }
+    pushHistory(`${formatNumber(s.previousInput!)} ${getOperatorSymbol(s.operator)} ${formatNumber(s.currentInput)} = ${formatNumber(resultToString(result))}`);
     setState({
       ...initialState,
       currentInput: resultToString(result),
@@ -160,6 +166,13 @@ export default function App() {
   };
 
   const inputOperator = (op: Operator) => {
+    // Additive history bookkeeping — reads only, never alters the state machine.
+    const pre = stateRef.current;
+    if (op === "%") {
+      pushHistory(`${formatNumber(pre.currentInput)} %`);
+    } else if (!(pre.operator !== null && !pre.shouldResetDisplay && pre.operator !== "%")) {
+      pushHistory(`${formatNumber(pre.currentInput)} ${getOperatorSymbol(op)}`);
+    }
     setState((s) => {
       if (op === "%") {
         const current = parseFloat(s.currentInput);
@@ -177,8 +190,7 @@ export default function App() {
         } else {
           currentInput = resultToString(result);
         }
-      }
-      return {
+      }      return {
         ...s,
         currentInput,
         isError,
@@ -276,10 +288,11 @@ export default function App() {
     "3": "3", "+": "+", "0": "0", ".": ".", "=": "Enter",
   };
 
-  const btn = (label: string, className: string, onClick: () => void) => (
+  const btn = (label: string, className: string, onClick: () => void, ariaLabel?: string) => (
     <button
       className={`${className}${flashKey !== null && btnDataKey[label] === flashKey ? " flash" : ""}`}
       onClick={onClick}
+      aria-label={ariaLabel ?? label}
     >
       {label}
     </button>
@@ -289,8 +302,8 @@ export default function App() {
     <div className={isDarkMode ? "theme-dark" : "theme-light"}>
       <div className="calculator">
         <div className="header">
-          <button className="theme-toggle" onClick={toggleTheme}>
-            <div className="toggle-circle" />
+          <button className="theme-toggle" onClick={toggleTheme} aria-label={isDarkMode ? "Switch to light theme" : "Switch to dark theme"}>
+            <div className={`toggle-circle${isDarkMode ? " is-dark" : " is-light"}`} />
             <span>{isDarkMode ? "Switch to Light" : "Switch to Dark"}</span>
           </button>
           <button
@@ -298,45 +311,54 @@ export default function App() {
             onClick={refreshCalculator}
             ref={refreshBtnRef}
             title="Reset Calculator"
+            aria-label="Reset Calculator"
           >
             ⟲
           </button>
         </div>
 
         <div className="display">
+          <div className="history" aria-live="polite" aria-label="Calculation history">
+            {history.map((entry, i) => (
+              <div className="history-row" key={`${i}-${entry}`}>{entry}</div>
+            ))}
+          </div>
           <div className="calculation">{state.calculationText}</div>
           <div
             className={`display-text${state.isError ? " error" : ""}`}
             style={{ fontSize }}
+            key={displayText}
+            role="status"
+            aria-live="polite"
           >
             {displayText}
           </div>
         </div>
 
         <div className="buttons">
-          {btn("C", "btn btn-function", clearDisplay)}
-          {btn("+/−", "btn btn-function", toggleSign)}
-          {btn("%", "btn btn-function", () => inputOperator("%"))}
-          {btn("÷", `btn btn-operator${state.activeOperator === "/" ? " active" : ""}`, () => inputOperator("/"))}
+          {btn("C", "btn btn-function", clearDisplay, "All clear")}
+          {btn("+/−", "btn btn-function", toggleSign, "Toggle sign")}
+          {btn("%", "btn btn-function", () => inputOperator("%"), "Percent")}
+          {btn("÷", `btn btn-operator${state.activeOperator === "/" ? " active" : ""}`, () => inputOperator("/"), "Divide")}
 
           {btn("7", "btn", () => inputNumber("7"))}
           {btn("8", "btn", () => inputNumber("8"))}
           {btn("9", "btn", () => inputNumber("9"))}
-          {btn("×", `btn btn-operator${state.activeOperator === "*" ? " active" : ""}`, () => inputOperator("*"))}
+          {btn("×", `btn btn-operator${state.activeOperator === "*" ? " active" : ""}`, () => inputOperator("*"), "Multiply")}
 
           {btn("4", "btn", () => inputNumber("4"))}
           {btn("5", "btn", () => inputNumber("5"))}
           {btn("6", "btn", () => inputNumber("6"))}
-          {btn("−", `btn btn-operator${state.activeOperator === "-" ? " active" : ""}`, () => inputOperator("-"))}
+          {btn("−", `btn btn-operator${state.activeOperator === "-" ? " active" : ""}`, () => inputOperator("-"), "Subtract")}
 
           {btn("1", "btn", () => inputNumber("1"))}
           {btn("2", "btn", () => inputNumber("2"))}
           {btn("3", "btn", () => inputNumber("3"))}
-          {btn("+", `btn btn-operator${state.activeOperator === "+" ? " active" : ""}`, () => inputOperator("+"))}
+          {btn("+", `btn btn-operator${state.activeOperator === "+" ? " active" : ""}`, () => inputOperator("+"), "Add")}
 
           {btn("0", "btn btn-zero", () => inputNumber("0"))}
-          {btn(".", "btn", () => inputNumber("."))}
-          {btn("=", "btn btn-operator", calculate)}
+          {btn(".", "btn", () => inputNumber("."), "Decimal point")}
+          {btn("=", "btn btn-operator", calculate, "Equals")}
         </div>
       </div>
     </div>
