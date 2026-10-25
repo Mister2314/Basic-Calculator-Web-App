@@ -17,10 +17,11 @@ html[data-theme="dark"] {
     --accent: #ff9500;
     --grid: #48484a;
     --text: #ffffff;
-    --text-dim: #8e8e93;
+    --text-dim: #98989d; /* 4.85:1 on --body — AA normal text */
     --panel: #232325;
     --shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
     --active-fg: #ff9500;
+    --on-accent: #1c1c1e; /* white on #ff9500 is 1.9:1 — dark ink passes AA */
     color-scheme: dark;
 }
 
@@ -33,10 +34,11 @@ html[data-theme="light"] {
     --accent: #007aff;
     --grid: #d1d1d6;
     --text: #1c1c1e;
-    --text-dim: #8e8e93;
+    --text-dim: #6e6e73; /* 5.07:1 on --body — AA normal text */
     --panel: #fafafc;
     --shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
     --active-fg: #007aff;
+    --on-accent: #ffffff; /* 3.98:1 — passes large-text AA (24px keys) */
     color-scheme: light;
 }
 
@@ -353,7 +355,8 @@ body {
 .btn-sci {
     background: color-mix(in srgb, var(--key) 70%, var(--body));
     color: var(--accent);
-    font-size: 1.15rem;
+    font-size: 1.2rem;
+    font-weight: 600; /* large-text AA threshold: 18.66px bold at 3:1 */
     min-height: 48px;
 }
 
@@ -440,7 +443,7 @@ body {
 
 .btn-operator {
     background: var(--accent);
-    color: #ffffff;
+    color: var(--on-accent);
     font-weight: 500;
 }
 
