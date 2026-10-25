@@ -1,22 +1,34 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  PI,
+  applyUnary,
+  compute,
+  formatNumber,
+  resultToString,
+  type UnaryOp,
+} from "./lib/calc";
 import "./styles.css";
 
-function formatNumber(num: string): string {
-  if (num === "Error") return num;
-  const number = parseFloat(num);
-  if (isNaN(number)) return num;
-  if (
-    Math.abs(number) >= 1000000000 ||
-    (Math.abs(number) < 0.000001 && number !== 0)
-  ) {
-    return number.toExponential(2);
-  }
-  if (number === Math.floor(number)) {
-    return number.toLocaleString("en-US").replace(/,/g, " ");
-  } else {
-    let formatted = number.toFixed(10);
-    formatted = parseFloat(formatted).toString();
-    return formatted;
+type Operator = "+" | "-" | "*" | "/" | "%";
+
+type ThemeMode = "system" | "light" | "dark";
+
+type HistoryEntry = {
+  id: number;
+  expr: string;
+  result: string;
+};
+
+const HISTORY_KEY = "bc-history";
+const MEMORY_KEY = "bc-memory";
+const THEME_KEY = "bc-theme";
+
+function loadJSON<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw === null ? fallback : (JSON.parse(raw) as T);
+  } catch {
+    return fallback;
   }
 }
 
@@ -36,8 +48,6 @@ function getOperatorSymbol(op: string): string {
       return op;
   }
 }
-
-type Operator = "+" | "-" | "*" | "/" | "%";
 
 interface CalcState {
   currentInput: string;
@@ -59,57 +69,108 @@ const initialState: CalcState = {
   activeOperator: null,
 };
 
-type ArithmeticOperator = "+" | "-" | "*" | "/";
-
-function compute(
-  prev: string,
-  current: string,
-  operator: ArithmeticOperator
-): number | "Error" {
-  const p = parseFloat(prev);
-  const c = parseFloat(current);
-  switch (operator) {
-    case "+":
-      return p + c;
-    case "-":
-      return p - c;
-    case "*":
-      return p * c;
-    case "/":
-      if (c === 0) return "Error";
-      return p / c;
+/** Initial theme reflects the pre-paint decision made in index.html. */
+function initialThemeMode(): ThemeMode {
+  const stored = (() => {
+    try {
+      return localStorage.getItem(THEME_KEY);
+    } catch {
+      return null;
+    }
+  })();
+  if (stored === "light" || stored === "dark" || stored === "system") {
+    return stored;
   }
-}
-
-function resultToString(result: number): string {
-  if (Math.abs(result) < 0.000001 && result !== 0) {
-    return result.toExponential(2);
-  }
-  if (Math.abs(result) >= 999999999) {
-    return result.toExponential(2);
-  }
-  if (result === Math.floor(result)) {
-    return result.toString();
-  }
-  return parseFloat(result.toFixed(10)).toString();
+  return "system";
 }
 
 export default function App() {
   const [state, setState] = useState<CalcState>(initialState);
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [themeMode, setThemeMode] = useState<ThemeMode>(initialThemeMode);
   const [flashKey, setFlashKey] = useState<string | null>(null);
-  const [history, setHistory] = useState<string[]>([]);
+  const [history, setHistory] = useState<HistoryEntry[]>(() =>
+    loadJSON<HistoryEntry[]>(HISTORY_KEY, [])
+  );
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [memory, setMemory] = useState<number>(() =>
+    loadJSON<number>(MEMORY_KEY, 0)
+  );
+  const [memoryActive, setMemoryActive] = useState<boolean>(
+    () => loadJSON<number>(MEMORY_KEY, 0) !== 0
+  );
+  const [scientific, setScientific] = useState(false);
+  const [copied, setCopied] = useState(false);
   const refreshBtnRef = useRef<HTMLButtonElement>(null);
-
-  const pushHistory = (entry: string) =>
-    setHistory((h) => [entry, ...h].slice(0, 3));
+  const nextId = useRef(1);
 
   const stateRef = useRef(state);
   stateRef.current = state;
+  const memoryRef = useRef(memory);
+  memoryRef.current = memory;
+
+  // ── Persistence ────────────────────────────────────────────────────────
+  useEffect(() => {
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 30)));
+    } catch {
+      /* private mode — history simply does not persist */
+    }
+  }, [history]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(MEMORY_KEY, JSON.stringify(memory));
+    } catch {
+      /* ignore */
+    }
+  }, [memory]);
+
+  // ── Theme: system default + persisted toggle, crossfade without flash ──
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => {
+      const dark =
+        themeMode === "dark" ||
+        (themeMode === "system" && mq.matches);
+      document.documentElement.dataset.theme = dark ? "dark" : "light";
+    };
+    apply();
+    try {
+      localStorage.setItem(THEME_KEY, themeMode);
+    } catch {
+      /* ignore */
+    }
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, [themeMode]);
+
+  const isDark =
+    themeMode === "dark" ||
+    (themeMode === "system" &&
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+  const cycleTheme = () =>
+    setThemeMode((m) => (m === "system" ? "dark" : m === "dark" ? "light" : "system"));
+
+  const themeLabel =
+    themeMode === "system"
+      ? isDark
+        ? "System (dark)"
+        : "System (light)"
+      : themeMode === "dark"
+        ? "Dark"
+        : "Light";
+
+  // ── History helpers ────────────────────────────────────────────────────
+  const pushHistory = useCallback((expr: string, result: string) => {
+    setHistory((h) =>
+      [{ id: nextId.current++, expr, result }, ...h].slice(0, 30)
+    );
+  }, []);
 
   const clearDisplay = () => {
     setState({ ...initialState });
-    setHistory([]);
   };
 
   const showError = () => {
@@ -122,15 +183,17 @@ export default function App() {
     if (s.operator === null || s.shouldResetDisplay || s.operator === "%") return;
     const result = compute(s.previousInput!, s.currentInput, s.operator);
     if (result === "Error") {
-      // Mirrors the original: operator/previousInput are left untouched and the
-      // pending 2s timer resets the whole calculator.
       showError();
       return;
     }
-    pushHistory(`${formatNumber(s.previousInput!)} ${getOperatorSymbol(s.operator)} ${formatNumber(s.currentInput)} = ${formatNumber(resultToString(result))}`);
+    const resultStr = resultToString(result);
+    pushHistory(
+      `${formatNumber(s.previousInput!)} ${getOperatorSymbol(s.operator)} ${formatNumber(s.currentInput)}`,
+      formatNumber(resultStr)
+    );
     setState({
       ...initialState,
-      currentInput: resultToString(result),
+      currentInput: resultStr,
       shouldResetDisplay: true,
     });
   };
@@ -141,7 +204,6 @@ export default function App() {
       let shouldResetDisplay = s.shouldResetDisplay;
       let isError = s.isError;
       if (currentInput === "Error") {
-        // Original calls clearDisplay() first, then keeps going with a clean slate.
         currentInput = "0";
         shouldResetDisplay = false;
         isError = false;
@@ -153,31 +215,28 @@ export default function App() {
         if (num === "." && currentInput.includes(".")) {
           return { ...s, currentInput, shouldResetDisplay, isError };
         }
-        if (currentInput.length >= 9 && num !== ".") {
+        if (currentInput.length >= 12 && num !== ".") {
           return { ...s, currentInput, shouldResetDisplay, isError };
         }
         currentInput =
           currentInput === "0" && num !== "." ? num : currentInput + num;
       }
-      // The original only clears the highlighted operator button; the pending
-      // operator itself stays set so chained operations keep working.
-      return { ...s, currentInput, shouldResetDisplay, isError, activeOperator: null };
+      return {
+        ...s,
+        currentInput,
+        shouldResetDisplay,
+        isError,
+        activeOperator: null,
+      };
     });
   };
 
   const inputOperator = (op: Operator) => {
-    // Additive history bookkeeping — reads only, never alters the state machine.
-    const pre = stateRef.current;
-    if (op === "%") {
-      pushHistory(`${formatNumber(pre.currentInput)} %`);
-    } else if (!(pre.operator !== null && !pre.shouldResetDisplay && pre.operator !== "%")) {
-      pushHistory(`${formatNumber(pre.currentInput)} ${getOperatorSymbol(op)}`);
-    }
     setState((s) => {
       if (op === "%") {
         const current = parseFloat(s.currentInput);
         if (isNaN(current)) return s;
-        return { ...s, currentInput: (current / 100).toString() };
+        return { ...s, currentInput: resultToString(current / 100) };
       }
       let currentInput = s.currentInput;
       let isError = s.isError;
@@ -190,7 +249,8 @@ export default function App() {
         } else {
           currentInput = resultToString(result);
         }
-      }      return {
+      }
+      return {
         ...s,
         currentInput,
         isError,
@@ -201,6 +261,37 @@ export default function App() {
         calculationText: `${formatNumber(currentInput)} ${getOperatorSymbol(op)}`,
       };
     });
+  };
+
+  // ── Unary scientific ops ───────────────────────────────────────────────
+  const inputUnary = (op: UnaryOp) => {
+    const pre = stateRef.current;
+    if (pre.currentInput === "Error") return;
+    const result = applyUnary(pre.currentInput, op);
+    if (result === "Error") {
+      showError();
+      return;
+    }
+    const label = op === "sqrt" ? "√" : op === "sqr" ? "sqr" : "1/";
+    pushHistory(
+      `${label}(${formatNumber(pre.currentInput)})`,
+      formatNumber(resultToString(result))
+    );
+    setState((s) => ({
+      ...s,
+      currentInput: resultToString(result),
+      shouldResetDisplay: true,
+    }));
+  };
+
+  const inputPi = () => {
+    setState((s) => ({
+      ...s,
+      currentInput: PI,
+      shouldResetDisplay: false,
+      isError: false,
+      activeOperator: null,
+    }));
   };
 
   const toggleSign = () => {
@@ -222,8 +313,68 @@ export default function App() {
     });
   };
 
+  // ── Memory keys ────────────────────────────────────────────────────────
+  const memoryClear = () => {
+    setMemory(0);
+    setMemoryActive(false);
+  };
+
+  const memoryRecall = () => {
+    const m = memoryRef.current;
+    if (m === 0 && !memoryActive) return;
+    setState((s) => ({
+      ...s,
+      currentInput: resultToString(m),
+      shouldResetDisplay: true,
+      isError: false,
+    }));
+  };
+
+  const memoryAdd = (sign: 1 | -1) => {
+    const s = stateRef.current;
+    const v = parseFloat(s.currentInput);
+    if (isNaN(v) || s.isError) return;
+    const next = memoryRef.current + sign * v;
+    setMemory(next);
+    setMemoryActive(true);
+    setState((cur) => ({ ...cur, shouldResetDisplay: true }));
+  };
+
+  // ── Copy / paste ───────────────────────────────────────────────────────
+  const copyResult = async () => {
+    const s = stateRef.current;
+    if (s.currentInput === "Error") return;
+    try {
+      await navigator.clipboard.writeText(s.currentInput);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1200);
+    } catch {
+      /* clipboard unavailable (non-secure context) */
+    }
+  };
+
+  useEffect(() => {
+    const onPaste = (event: ClipboardEvent) => {
+      const text = event.clipboardData?.getData("text")?.trim();
+      if (!text) return;
+      const cleaned = text.replace(/,/g, "").replace(/\s/g, "");
+      if (!/^-?\d*\.?\d+$/.test(cleaned)) return;
+      event.preventDefault();
+      setState((s) => ({
+        ...s,
+        currentInput: cleaned === "" ? "0" : cleaned,
+        shouldResetDisplay: true,
+        isError: false,
+        activeOperator: null,
+      }));
+    };
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+  }, []);
+
   const refreshCalculator = () => {
     clearDisplay();
+    setPanelOpen(false);
     const btn = refreshBtnRef.current;
     if (btn) {
       btn.style.transform = "rotate(360deg)";
@@ -233,39 +384,57 @@ export default function App() {
     }
   };
 
-  const toggleTheme = () => setIsDarkMode((d) => !d);
+  const reuseResult = (entry: HistoryEntry) => {
+    const value = entry.result.replace(/\s/g, "");
+    if (!/^-?[\d.]+(e[+-]?\d+)?$/i.test(value)) return;
+    setState((s) => ({
+      ...s,
+      currentInput: value,
+      shouldResetDisplay: true,
+      isError: false,
+      activeOperator: null,
+    }));
+  };
 
-  // Keyboard bindings — identical to the original, including the button flash.
+  // ── Keyboard bindings ──────────────────────────────────────────────────
   useEffect(() => {
     const flashTimer = { id: 0 };
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
       const key = event.key;
       if (key >= "0" && key <= "9") {
         inputNumber(key);
-      } else if (key === ".") {
+      } else if (key === "." || key === ",") {
         inputNumber(".");
-      } else if (
-        key === "+" ||
-        key === "-" ||
-        key === "*" ||
-        key === "/" ||
-        key === "%"
-      ) {
+      } else if (["+", "-", "*", "/"].includes(key)) {
         inputOperator(key as Operator);
+      } else if (key === "%") {
+        inputOperator("%");
       } else if (key === "Enter" || key === "=") {
         event.preventDefault();
         calculate();
-      } else if (key === "Escape" || key === "c" || key === "C") {
+      } else if (key === "Escape") {
         clearDisplay();
-      } else if (key === "Backspace") {
+      } else if (key === "Backspace" || key === "Delete") {
         event.preventDefault();
         backspace();
       } else if (key === "r" || key === "R") {
         refreshCalculator();
+      } else if (key === "h" || key === "H") {
+        setPanelOpen((p) => !p);
+      } else if (key === "s" || key === "S") {
+        setScientific((p) => !p);
+      } else {
+        return;
       }
-      const dataKey = key === "Enter" ? "Enter" : key;
-      if (["0","1","2","3","4","5","6","7","8","9",".","+","-","*","/","%","Enter"].includes(dataKey)) {
-        setFlashKey(dataKey);
+      const echoKey =
+        key === "Enter" ? "Enter" : key === "," ? "." : key === "Escape" ? "c" : key;
+      const echoSet = [
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ".",
+        "+", "-", "*", "/", "%", "Enter", "c",
+      ];
+      if (echoSet.includes(echoKey)) {
+        setFlashKey(echoKey);
         window.clearTimeout(flashTimer.id);
         flashTimer.id = window.setTimeout(() => setFlashKey(null), 100);
       }
@@ -280,63 +449,171 @@ export default function App() {
 
   const displayText = formatNumber(state.currentInput);
   const displayLength = displayText.length;
-  const fontSize = displayLength > 9 ? "2.2rem" : displayLength > 6 ? "2.6rem" : "3rem";
+  const fontSize =
+    displayLength > 11 ? "1.7rem" : displayLength > 9 ? "2.2rem" : displayLength > 6 ? "2.6rem" : "3rem";
 
   const btnDataKey: Record<string, string> = {
-    "C": "c", "+/−": "", "%": "%", "÷": "/", "7": "7", "8": "8", "9": "9",
+    "AC": "c", "+/−": "", "%": "%", "÷": "/", "7": "7", "8": "8", "9": "9",
     "×": "*", "4": "4", "5": "5", "6": "6", "−": "-", "1": "1", "2": "2",
     "3": "3", "+": "+", "0": "0", ".": ".", "=": "Enter",
   };
 
-  const btn = (label: string, className: string, onClick: () => void, ariaLabel?: string) => (
+  const btn = (
+    label: string,
+    className: string,
+    onClick: () => void,
+    ariaLabel?: string
+  ) => (
     <button
       className={`${className}${flashKey !== null && btnDataKey[label] === flashKey ? " flash" : ""}`}
       onClick={onClick}
       aria-label={ariaLabel ?? label}
+      type="button"
     >
       {label}
     </button>
   );
 
+  const historyCount = history.length;
+
   return (
-    <div className={isDarkMode ? "theme-dark" : "theme-light"}>
+    <div className="app">
       <div className="calculator">
         <div className="header">
-          <button className="theme-toggle" onClick={toggleTheme} aria-label={isDarkMode ? "Switch to light theme" : "Switch to dark theme"}>
-            <div className={`toggle-circle${isDarkMode ? " is-dark" : " is-light"}`} />
-            <span>{isDarkMode ? "Switch to Light" : "Switch to Dark"}</span>
-          </button>
           <button
-            className="refresh-btn"
-            onClick={refreshCalculator}
-            ref={refreshBtnRef}
-            title="Reset Calculator"
-            aria-label="Reset Calculator"
+            className="theme-toggle"
+            onClick={cycleTheme}
+            aria-label={`Theme: ${themeLabel}. Click to change`}
+            type="button"
           >
-            ⟲
+            <div
+              className={`toggle-circle theme-${themeMode}`}
+              aria-hidden="true"
+            />
+            <span>{themeLabel}</span>
           </button>
+          <div className="header-actions">
+            <button
+              className={`icon-btn${scientific ? " active" : ""}`}
+              onClick={() => setScientific((p) => !p)}
+              aria-pressed={scientific}
+              aria-label="Toggle scientific keys"
+              title="Scientific keys (S)"
+              type="button"
+            >
+              <span aria-hidden="true">ƒ𝑥</span>
+            </button>
+            <button
+              className={`icon-btn${panelOpen ? " active" : ""}`}
+              onClick={() => setPanelOpen((p) => !p)}
+              aria-pressed={panelOpen}
+              aria-expanded={panelOpen}
+              aria-label="Toggle calculation history"
+              title="History (H)"
+              type="button"
+            >
+              <span aria-hidden="true">⧉</span>
+              {historyCount > 0 && (
+                <span className="badge" aria-hidden="true">
+                  {historyCount > 9 ? "9+" : historyCount}
+                </span>
+              )}
+            </button>
+            <button
+              className="refresh-btn"
+              onClick={refreshCalculator}
+              ref={refreshBtnRef}
+              title="Reset Calculator (R)"
+              aria-label="Reset Calculator"
+              type="button"
+            >
+              ⟲
+            </button>
+          </div>
         </div>
 
         <div className="display">
-          <div className="history" aria-live="polite" aria-label="Calculation history">
-            {history.map((entry, i) => (
-              <div className="history-row" key={`${i}-${entry}`}>{entry}</div>
-            ))}
-          </div>
           <div className="calculation">{state.calculationText}</div>
-          <div
-            className={`display-text${state.isError ? " error" : ""}`}
-            style={{ fontSize }}
-            key={displayText}
-            role="status"
-            aria-live="polite"
-          >
-            {displayText}
+          <div className="display-row">
+            <button
+              className="copy-btn"
+              onClick={copyResult}
+              aria-label={copied ? "Copied" : "Copy result"}
+              title="Copy result"
+              type="button"
+            >
+              {copied ? "✓" : "⧉"}
+            </button>
+            <div
+              className={`display-text${state.isError ? " error" : ""}`}
+              style={{ fontSize }}
+              key={displayText}
+              role="status"
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {displayText}
+            </div>
           </div>
         </div>
 
+        {panelOpen && (
+          <div className="history-panel" aria-label="Calculation history">
+            {historyCount === 0 ? (
+              <p className="history-empty">No calculations yet — results land here as you work.</p>
+            ) : (
+              <>
+                <ul className="history-list">
+                  {history.map((entry) => (
+                    <li key={entry.id}>
+                      <button
+                        className="history-item"
+                        onClick={() => reuseResult(entry)}
+                        title="Use this result"
+                        type="button"
+                      >
+                        <span className="history-expr">{entry.expr}</span>
+                        <span className="history-result">= {entry.result}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  className="history-clear"
+                  onClick={() => setHistory([])}
+                  type="button"
+                >
+                  Clear history
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {scientific && (
+          <div className="sci-row" aria-label="Scientific keys">
+            {btn("√", "btn btn-sci", () => inputUnary("sqrt"), "Square root")}
+            {btn("x²", "btn btn-sci", () => inputUnary("sqr"), "Square")}
+            {btn("1/x", "btn btn-sci", () => inputUnary("inv"), "Reciprocal")}
+            {btn("π", "btn btn-sci", inputPi, "Pi")}
+          </div>
+        )}
+
+        <div className="memory-row" aria-label="Memory keys">
+          {btn("MC", "btn btn-mem", memoryClear, "Memory clear", )}
+          {btn("MR", "btn btn-mem", memoryRecall, "Memory recall")}
+          {btn("M+", "btn btn-mem", () => memoryAdd(1), "Memory add")}
+          {btn("M−", "btn btn-mem", () => memoryAdd(-1), "Memory subtract")}
+          <span
+            className={`memory-indicator${memoryActive ? " on" : ""}`}
+            aria-label={memoryActive ? `Memory holds ${formatNumber(resultToString(memory))}` : "Memory empty"}
+          >
+            M
+          </span>
+        </div>
+
         <div className="buttons">
-          {btn("C", "btn btn-function", clearDisplay, "All clear")}
+          {btn("AC", "btn btn-function", clearDisplay, "All clear")}
           {btn("+/−", "btn btn-function", toggleSign, "Toggle sign")}
           {btn("%", "btn btn-function", () => inputOperator("%"), "Percent")}
           {btn("÷", `btn btn-operator${state.activeOperator === "/" ? " active" : ""}`, () => inputOperator("/"), "Divide")}

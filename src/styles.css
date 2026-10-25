@@ -1,4 +1,4 @@
-/* ── Design tokens (Calculator-as-object, pack__calculator.md) ─────────── */
+/* ── Design tokens (Calculator-as-object) ─────────────────────────────── */
 :root {
     /* motion */
     --press-in: 90ms cubic-bezier(0.2, 0, 0.4, 1);
@@ -8,7 +8,7 @@
     --hover: 150ms ease;
 }
 
-.theme-dark {
+html[data-theme="dark"] {
     --bg: #1c1c1e;
     --body: #2c2c2e;
     --key: #636366;
@@ -18,11 +18,13 @@
     --grid: #48484a;
     --text: #ffffff;
     --text-dim: #8e8e93;
+    --panel: #232325;
     --shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
     --active-fg: #ff9500;
+    color-scheme: dark;
 }
 
-.theme-light {
+html[data-theme="light"] {
     --bg: #f5f5f7;
     --body: #ffffff;
     --key: #f2f2f7;
@@ -32,8 +34,10 @@
     --grid: #d1d1d6;
     --text: #1c1c1e;
     --text-dim: #8e8e93;
+    --panel: #fafafc;
     --shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
     --active-fg: #007aff;
+    color-scheme: light;
 }
 
 * {
@@ -52,15 +56,14 @@ body {
     padding: 20px;
     padding-top: max(20px, env(safe-area-inset-top));
     padding-bottom: max(20px, env(safe-area-inset-bottom));
+    background: var(--bg);
     transition: background var(--crossfade);
 }
 
-.theme-light {
-    background: var(--bg);
-}
-
-.theme-dark {
-    background: var(--bg);
+.app {
+    width: 100%;
+    display: flex;
+    justify-content: center;
 }
 
 .calculator {
@@ -79,7 +82,14 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 8px;
     background: var(--body);
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .theme-toggle {
@@ -90,6 +100,7 @@ body {
     border: none;
     border-radius: 20px;
     padding: 6px 12px;
+    min-height: 32px;
     color: var(--text);
     font-size: 12px;
     cursor: pointer;
@@ -104,89 +115,123 @@ body {
     transition: transform 350ms var(--spring), background var(--crossfade);
 }
 
-.toggle-circle.is-light {
-    transform: rotate(180deg) scale(1.15);
+.toggle-circle.theme-system {
+    border: 2px solid var(--body);
+    box-sizing: content-box;
+    margin: -2px;
 }
 
-.toggle-circle.is-dark {
+.toggle-circle.theme-dark {
     transform: rotate(0deg) scale(1);
+}
+
+.toggle-circle.theme-light {
+    transform: rotate(180deg) scale(1.15);
 }
 
 .theme-toggle:hover .toggle-circle {
     transform: rotate(180deg) scale(1.2);
 }
 
+.icon-btn,
 .refresh-btn {
+    position: relative;
     background: none;
     border: none;
     color: var(--accent);
-    font-size: 18px;
+    font-size: 16px;
+    line-height: 1;
     cursor: pointer;
-    opacity: 0.8;
+    opacity: 0.85;
     transition: all var(--hover);
-    padding: 5px;
-    border-radius: 8px;
+    padding: 8px;
+    min-width: 40px;
+    min-height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
+.icon-btn:hover,
 .refresh-btn:hover {
     opacity: 1;
     background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
+.icon-btn:active,
 .refresh-btn:active {
     transform: scale(0.95);
 }
 
-/* ── Display ────────────────────────────────────────────────────────────── */
+.icon-btn.active {
+    opacity: 1;
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+    color: var(--active-fg);
+}
+
+.badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 600;
+    min-width: 14px;
+    height: 14px;
+    line-height: 14px;
+    text-align: center;
+    border-radius: 7px;
+    padding: 0 2px;
+}
+
+/* ── Display ─────────────────────────────────────────────────────────── */
 .display {
     background: var(--body);
-    padding: 12px 20px 20px;
+    padding: 4px 20px 20px;
     text-align: right;
-    min-height: 120px;
+    min-height: 96px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-}
-
-/* History strip — additive ledger, does not affect the state machine */
-.history {
-    min-height: 15px;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    overflow: hidden;
-}
-
-.history-row {
-    color: var(--text-dim);
-    font-size: 12px;
-    line-height: 1.25;
-    font-variant-numeric: tabular-nums;
-    opacity: 0.75;
-    animation: history-in 250ms ease-out;
-}
-
-.history-row:first-child {
-    opacity: 1;
-}
-
-@keyframes history-in {
-    from {
-        transform: translateY(-4px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 0.75;
-    }
+    gap: 8px;
 }
 
 .calculation {
     color: var(--text-dim);
-    font-size: 16px;
-    margin-bottom: 10px;
-    min-height: 20px;
+    font-size: 15px;
+    min-height: 19px;
     font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.display-row {
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.copy-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 15px;
+    cursor: pointer;
+    padding: 8px;
+    min-width: 36px;
+    min-height: 36px;
+    border-radius: 8px;
+    transition: all var(--hover);
+    flex-shrink: 0;
+}
+
+.copy-btn:hover {
+    color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
 }
 
 .display-text {
@@ -195,11 +240,12 @@ body {
     font-weight: 300;
     line-height: 1;
     font-variant-numeric: tabular-nums;
+    overflow: hidden;
+    text-overflow: ellipsis;
     transform-origin: right bottom;
     animation: settle var(--settle);
 }
 
-/* Digit entry / result settle — the display lands, it never just appears */
 @keyframes settle {
     from {
         transform: scale(1.03);
@@ -209,7 +255,149 @@ body {
     }
 }
 
-/* ── Key grid ───────────────────────────────────────────────────────────── */
+/* ── History panel ────────────────────────────────────────────────────── */
+.history-panel {
+    background: var(--panel);
+    border-top: 1px solid var(--grid);
+    border-bottom: 1px solid var(--grid);
+    padding: 10px 16px 12px;
+    max-height: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    animation: panel-in 220ms var(--settle);
+}
+
+@keyframes panel-in {
+    from {
+        transform: translateY(-6px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.history-empty {
+    color: var(--text-dim);
+    font-size: 12.5px;
+    text-align: center;
+    padding: 8px 0;
+}
+
+.history-list {
+    list-style: none;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.history-item {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+    background: none;
+    border: none;
+    border-radius: 8px;
+    padding: 7px 10px;
+    cursor: pointer;
+    font-variant-numeric: tabular-nums;
+    transition: background var(--hover);
+    text-align: right;
+}
+
+.history-item:hover {
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.history-expr {
+    color: var(--text-dim);
+    font-size: 12px;
+}
+
+.history-result {
+    color: var(--text);
+    font-size: 16px;
+}
+
+.history-clear {
+    align-self: center;
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 6px 14px;
+    border-radius: 12px;
+    transition: all var(--hover);
+}
+
+.history-clear:hover {
+    color: #ff453a;
+    background: color-mix(in srgb, #ff453a 10%, transparent);
+}
+
+/* ── Scientific row ───────────────────────────────────────────────────── */
+.sci-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--grid);
+    animation: panel-in 220ms var(--settle);
+}
+
+.btn-sci {
+    background: color-mix(in srgb, var(--key) 70%, var(--body));
+    color: var(--accent);
+    font-size: 1.15rem;
+    min-height: 48px;
+}
+
+/* ── Memory row ───────────────────────────────────────────────────────── */
+.memory-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    position: relative;
+    background: var(--grid);
+}
+
+.btn-mem {
+    background: var(--body);
+    color: var(--text-dim);
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    min-height: 42px;
+}
+
+.btn-mem:hover {
+    color: var(--text);
+}
+
+.memory-indicator {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-dim);
+    opacity: 0.35;
+    pointer-events: none;
+    transition: opacity var(--hover), color var(--hover);
+}
+
+.memory-indicator.on {
+    opacity: 1;
+    color: var(--accent);
+}
+
+/* ── Key grid ─────────────────────────────────────────────────────────── */
 .buttons {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -229,7 +417,6 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Key press choreography: press in fast, spring back with overshoot */
     transition: transform var(--spring), background var(--hover), color var(--hover), opacity var(--hover);
     transform: translateY(0) scale(1);
 }
@@ -239,7 +426,6 @@ body {
     transition: transform var(--press-in);
 }
 
-/* Keyboard echo — the pressed key physically depresses when typed */
 .btn.flash {
     transform: translateY(1px) scale(0.96);
     opacity: 0.85;
@@ -281,12 +467,16 @@ body {
 /* Visible focus for keyboard users */
 .btn:focus-visible,
 .theme-toggle:focus-visible,
+.icon-btn:focus-visible,
+.copy-btn:focus-visible,
+.history-item:focus-visible,
+.history-clear:focus-visible,
 .refresh-btn:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: -3px;
 }
 
-/* ── Mobile — thumb grid, safe areas ───────────────────────────────────── */
+/* ── Mobile ───────────────────────────────────────────────────────────── */
 @media (max-width: 768px) {
     body {
         padding: 12px;
@@ -321,9 +511,13 @@ body {
         min-height: 64px;
         font-size: 1.3rem;
     }
+
+    .btn-mem {
+        min-height: 46px;
+    }
 }
 
-/* ── Reduced motion — everything settles instantly ─────────────────────── */
+/* ── Reduced motion ───────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
         animation-duration: 0.01ms !important;
